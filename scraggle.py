@@ -104,12 +104,10 @@ def place_word(grid,connectivity,start,end,word,available_chars):
     for index in end:
         if not grid[index]:
             valid_ending = True
-            if valid_ending:
-                break
         else:
-            valid_ending = (word[-1] == grid[index])
-            if valid_ending:
-                break
+            valid_ending = (word[-1] == grid[index][0])
+        if valid_ending:
+            break
     if not valid_ending:
         print('not a valid ending')
         return False, grid, available_chars
