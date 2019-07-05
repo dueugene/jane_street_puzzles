@@ -3,7 +3,7 @@ def main():
     # setup graph of grid, in dictionary format
     # number the grid 1-36, from top left to bottom right
     # maybe a better way to encode?
-    grid = { 1  : [ 2,  7,  8 ],
+    connectivity = { 1  : [ 2,  7,  8 ],
              2  : [ 1,  3,  7,  8,  9 ],
              3  : [ 2,  4,  8,  9, 10 ],
              4  : [ 3,  5,  9, 10, 11 ],
@@ -38,9 +38,9 @@ def main():
              33 : [26, 27, 28, 32, 34],
              34 : [27, 28, 29, 33, 35],
              35 : [28, 29, 30, 34, 36],
-             36 : [29, 30, 34 ]
+             36 : [29, 30, 35 ]
         }
-    chars = { 1  : [],
+    grid = { 1  : [],
               2  : ['O'],
               3  : [],
               4  : ['E'],
@@ -70,19 +70,104 @@ def main():
               28 : ['A'],
               29 : [],
               30 : ['I'],
-              31 : [],
-              32 : ['U'],
-              33 : [],
-              34 : ['I'],
-              35 : [],
-              36 : ['O']
+              31 : ['U'],
+              32 : [],
+              33 : ['I'],
+              34 : [],
+              35 : ['O'],
+              36 : []
         }
-    print_grid(chars)
+    print_grid(grid)
+
+    # start = [1,2,3,7,8,9,13,14,15]
+    # end = [8,9,14,15]
+    # word = 'JOKING'
+
+    start = [8,9,14,15]
+    end = [15,16,21,22]
+    word = 'GROTESQUELY'
+    available_chars = 'BCDFGHJKLMNPQRSTVWYXZ'
+    flag,new_grid,available_chars2 = place_word(grid,connectivity,start,end,word,available_chars)
+
+    start = [15,16,21,22]
+    end = [22,23,28,29]
+    word = 'YCLEPT'
+    print(available_chars2)
+    place_word(new_grid,connectivity,start,end,word,available_chars2)
+    print_grid(grid)
     return
 
+def intersection(lst1, lst2):
 
+    # Use of hybrid method
+    temp = set(lst2)
+    lst3 = [value for value in lst1 if value in temp]
+    return lst3
 
+def place_word(grid,connectivity,start,end,word,available_chars):
+    print(word)
+    print(available_chars)
+    # check if word list is empty
+    if len(word) == 0:
+        return True, grid, available_chars
 
+    # check if the end is still valid
+    # print(end)
+    # print(word[-1])
+    valid_ending = False
+    for index in end:
+        if not grid[index]:
+            valid_ending = True
+            if valid_ending:
+                break
+        else:
+            valid_ending = (word[-1] == grid[index])
+            if valid_ending:
+                break
+    if not valid_ending:
+        print('not a valid ending')
+        return False, grid, available_chars
+
+    # place next word on board
+    next_char = word[0];
+    # check if next_char is available to place on board
+    if next_char in available_chars:
+        # loop through each available slot insert character if slot is empty
+        print(start)
+        for index in start:
+            if not grid[index]:
+                grid[index] = next_char
+                next_start = connectivity[index]
+                print(next_start)
+                if len(word[1:])==1:
+                    next_start = intersection(next_start,end)
+                flag,temp1,temp2 = place_word(grid,connectivity,next_start,end,word[1:],available_chars.replace(next_char, ''))
+                # check if succseful
+                if flag:
+                    available_chars = temp2
+                    new_grid = temp1
+                    return True, new_grid, available_chars;
+                else:
+                    grid[index] = [];
+    # check if next_char is already placed in starting points
+    else:
+        print('looking for ' + next_char + ' on board')
+        # print(start)
+        # print_grid(grid)
+        for index in start:
+             if next_char in grid[index]:
+                 next_start = connectivity[index]
+                 flag,temp1,temp2 = place_word(grid,connectivity,next_start,end,word[1:],available_chars)
+                 # check if succseful
+                 if flag:
+                     available_chars = temp2
+                     new_grid = temp1
+                     return True, new_grid, available_chars;
+
+    return False, grid, available_chars;
+
+def is_vowel(char):
+    return char in 'AEIOU'
 
 
 def print_grid(grid):
