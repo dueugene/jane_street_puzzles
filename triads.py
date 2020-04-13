@@ -110,3 +110,6 @@ def can_place_triangle(i, j, orientation):
             if grid[i3][j3] == 1:
                 return True
     return False
+
+
+triads(39)
