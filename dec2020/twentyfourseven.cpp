@@ -9,38 +9,46 @@ using namespace std;
 class TwentyFourSeven {
 
 public:
-  TwentyFourSeven();
   TwentyFourSeven(std::vector<std::vector<int>> givens, std::vector<std::vector<int>> rows, std::vector<std::vector<int>> cols);
   bool solve();
   void print();
-
-  bool can_place_number(const int i, const int j, const int n);
-  bool is_continuous_land() const;
+  
   bool is_valid_board() const;
 private:
-  
-  std::vector<std::vector<int>> board;
-  std::vector<int> nums = {21,1,2,3,4,5,6,7};
+
+  void insert_number(const int i, const int j, const int n);
+  bool can_place_number(const int i, const int j, const int n);
+  bool is_continuous_land() const;
+
+  // represents the 7x7 playing board
+  std::vector<std::vector<int>> board = std::vector<std::vector<int>> (7, std::vector<int> (7, -1));
+  // list of available numbers to place
+  std::vector<int> avail_nums = {21,1,2,3,4,5,6,7};
+  // 7x2 representing first number to be seen in the rows
   std::vector<std::vector<int>> row_seens;
+  // 7x2 representing first number to be seen in the cols
   std::vector<std::vector<int>> col_seens;
+  // running total of current sum in the rows, count of numbers, and empty cells
+  std::vector<int> row_sums = std::vector<int> (7, 0);
+  std::vector<int> row_count = std::vector<int> (7, 0);
+  std::vector<int> row_empty = std::vector<int> (7, 7);
+  // running total of current sum in the cols, count of numbers, and empty cells
+  std::vector<int> col_sums = std::vector<int> (7, 0);
+  std::vector<int> col_count = std::vector<int> (7, 0);
+  std::vector<int> col_empty = std::vector<int> (7, 7);
+  
 };
 
-
-
-TwentyFourSeven::TwentyFourSeven() {
-  board = std::vector<std::vector<int>> (7, std::vector<int> (7, -1));
-
-}
-
 TwentyFourSeven::TwentyFourSeven(std::vector<std::vector<int>> givens, std::vector<std::vector<int>> rows, std::vector<std::vector<int>> cols) {
-  board = std::vector<std::vector<int>> (7, std::vector<int> (7, -1));
-  for (int i = 0; i < givens.size(); i++) {
-    board[givens[i][0]][givens[i][1]] = givens[i][2];
-    nums[givens[i][2]]--;
+  // populate board with givens
+  for (int k = 0; k < givens.size(); k++) {
+    int i = givens[k][0];
+    int j = givens[k][1];
+    int n = givens[k][2];
+    insert_number(i, j, n);
   }
   row_seens = rows;
   col_seens = cols;
-
 }
 
 // solve board using a guess and check method with backtracking
@@ -49,13 +57,12 @@ bool TwentyFourSeven::solve() {
     for (int j = 0; j < 7; j++) {
       if (board[i][j] == -1) {
         // loop through available numbers
-        for (int k = 7; k >= 0; k--) {
-          if (can_place_number(i, j, k)) {
-            board[i][j] = k;
-            nums[k]--;
+        for (int n = 7; n >= 0; n--) {
+          if (can_place_number(i, j, n)) {
+            insert_number(i, j, n);
             if(solve()) {return true;}
-            board[i][j] = -1;
-            nums[k]++;
+            // "backtrack"
+            insert_number(i, j, -1);
           }
         }
         return false;
@@ -104,44 +111,59 @@ void TwentyFourSeven::print() {
   }
 }
 
+// insert number n at location i,j
+// also updates all vectors that keep track of sums, counts etc.
+void TwentyFourSeven::insert_number(const int i, const int j, const int n) {
+  int prev = board[i][j];
+  board[i][j] = -1;
+  if (prev >= 0) {
+    avail_nums[prev]++;
+    row_sums[i] -= prev;
+    row_empty[i]++;
+    col_sums[j] -= prev;
+    col_empty[j]++;
+    if (prev > 0) {
+      row_count[i]--;
+      col_count[j]--;
+    }
+  }
+  
+  if (n >= 0) {
+    board[i][j] = n;
+    avail_nums[n]--;
+
+    row_sums[i] += n;
+    row_empty[i]--;
+
+    col_sums[j] += n;
+    col_count[j]++;
+    if (n > 0) {
+      row_count[i]++;
+      col_empty[j]--;
+    }
+  }
+  
+}
+
 // confirms that the number n can be placed on board at index i,j
 bool TwentyFourSeven::can_place_number(const int i, const int j, const int n) {
+  // check n is within range
   if (n < 0 || n > 7) {return false;}
+  // check location is empty
   if (board[i][j] != -1) {return false;}
   
   // check that n is still available
-  if (nums[n] < 1) {return false;}
+  if (avail_nums[n] < 1) {return false;}
   
-  // count the number of numbers placed and total sum in row i, and col j
-  int count = 0;
-  int empty = 0;
-  int sum = 0;
-  for (int k = 0; k < 7; k++) {
-    if (board[i][k] == -1) {
-      empty++;
-    } else if (board[i][k] > 0) {
-      count++;
-      sum += board[i][k];
-    }
-  }
-  if (sum + n > 20) {return false;}
-  if (n != 0 && count == 4) {return false;}
-  if (n == 0 && empty < (4 - count) + 1) {return false;}
-  
-  count = 0;
-  empty = 0;
-  sum = 0;
-  for (int k = 0; k < 7; k++) {
-    if (board[k][j] == -1) {
-      empty++;
-    } else if (board[k][j] > 0) {
-      count++;
-      sum += board[k][j];
-    }
-  }
-  if (sum + n > 20) {return false;}
-  if (n != 0 && count == 4) {return false;}
-  if (n == 0 && empty < (4 - count) + 1) {return false;}
+  // check count and sum for row i
+  if (row_sums[i] + n > 20) {return false;}
+  if (n != 0 && row_count[i] == 4) {return false;}
+  if (n == 0 && row_empty[i] < (4 - row_count[i]) + 1) {return false;}
+
+  // check count and sum for col j
+  if (col_sums[j] + n > 20) {return false;}
+  if (n != 0 && col_count[j] == 4) {return false;}
+  if (n == 0 && col_empty[j] < (4 - col_count[j]) + 1) {return false;}
     
   // check that inserting a number would not make a 2 x 2 filled square
   board[i][j] = n;
@@ -230,14 +252,8 @@ bool TwentyFourSeven::is_valid_board() const {
         sum += board[i][j];
       }
     }
-    if (sum > 20) {
-      cout << "failed on sum" << endl;
-      return false;
-    }
-    if (count > 4) {
-      cout << "failed on count" << endl;
-      return false;
-    }
+    if (sum > 20) {return false;}
+    if (count > 4) {return false;}
   }
   // check the columns
   for (int j = 0; j < 7; j++) {
@@ -249,14 +265,8 @@ bool TwentyFourSeven::is_valid_board() const {
         sum += board[i][j];
       }
     }
-    if (sum > 20) {
-      cout << "failed on sum" << endl;
-      return false;
-    }
-    if (count > 4) {
-      cout << "failed on count" << endl;
-      return false;
-    }
+    if (sum > 20) {return false;}
+    if (count > 4) {return false;}
   }
   
   // confirm each 2 x 2 square has at least one empty square
@@ -267,10 +277,7 @@ bool TwentyFourSeven::is_valid_board() const {
       test = test || (board[i+1][j] <= 0);
       test = test || (board[i][j+1] <= 0);
       test = test || (board[i+1][j+1] <= 0);
-      if (test == false) {
-        cout << "failed on fours" << endl;
-        return false;
-      }
+      if (test == false) {return false;}
     }
   }
 
@@ -283,10 +290,7 @@ bool TwentyFourSeven::is_valid_board() const {
       while (j < 7 && board[i][j] == 0) {
         j++;
       }
-      if (j < 7 && !(board[i][j] == row_seens[i][0] || board[i][j] == -1)) {
-        cout << "failed on left" << endl;
-        return false;
-      }
+      if (j < 7 && !(board[i][j] == row_seens[i][0] || board[i][j] == -1)) {return false;}
     }
     // check right side
     if (row_seens[i][1] > 0) {
@@ -294,10 +298,7 @@ bool TwentyFourSeven::is_valid_board() const {
       while (j >= 0 && board[i][j] == 0) {
         j--;
       }
-      if (j >= 0 && !(board[i][j] == row_seens[i][1] || board[i][j] == -1)) {
-        cout << "failed on right" << endl;
-        return false;
-      }
+      if (j >= 0 && !(board[i][j] == row_seens[i][1] || board[i][j] == -1)) {return false;}
     }
   }
   // col wise
@@ -308,10 +309,7 @@ bool TwentyFourSeven::is_valid_board() const {
       while (i < 7 && board[i][j] == 0) {
         i++;
       }
-      if (i < 7 && !(board[i][j] == col_seens[j][0] || board[i][j] == -1)) {
-        cout << "failed on top" << endl;
-        return false;
-      }
+      if (i < 7 && !(board[i][j] == col_seens[j][0] || board[i][j] == -1)) {return false;}
     }
     // check bot side
     if (row_seens[j][1] > 0) {
@@ -319,10 +317,7 @@ bool TwentyFourSeven::is_valid_board() const {
       while (i >= 0 && board[i][j] == 0) {
         i--;
       }
-      if (i >= 0 && !(board[i][j] == col_seens[j][1] || board[i][j] == -1)) {
-        cout << "failed on bot" << endl;
-        return false;
-      }
+      if (i >= 0 && !(board[i][j] == col_seens[j][1] || board[i][j] == -1)) {return false;}
     }
   }
   return true;
