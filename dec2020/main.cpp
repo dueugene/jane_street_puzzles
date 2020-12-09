@@ -1,11 +1,13 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <chrono>
 
 #include "twentyfourseven.cpp"
 
 
 using namespace std;
+using Clock = std::chrono::high_resolution_clock;
 
 template <typename A>
 using mat = vector<vector<A>>;
@@ -56,11 +58,23 @@ int main(int argc, char** argv) {
   } 
   input.close();
 
-  cout << "Hello World" << endl; 
+  cout << filename << endl; 
   TwentyFourSeven test(givens, rows, cols);
   test.print();
-  cout << test.is_valid_board() << endl;
-  cout << test.solve() << endl;
+  cout << "Board is valid: " << test.is_valid_board() << endl;
+
+  auto t1 = Clock::now();
+  bool solved = test.solve();
+  auto t2 = Clock::now();
   test.print();
+  chrono::duration<double> elapsed_s = t2 - t1;
+  cout << "Elapsed time: " << elapsed_s.count() << "s" << endl;
+  
+  if (solved) {
+    cout << "Solve success" << endl;
+  } else {
+    cout << "Solve failed" <<endl;
+  }
+  
   return 0;
 }
