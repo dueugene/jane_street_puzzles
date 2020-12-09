@@ -4,8 +4,6 @@
 #include <string>
 #include <queue>
 
-using namespace std;
-
 class TwentyFourSeven {
 
 public:
@@ -19,7 +17,11 @@ private:
   void insert_number(const int i, const int j, const int n);
   bool can_place_number(const int i, const int j, const int n);
   bool is_continuous_land() const;
+  void restrict_based_on_seens(std::vector<std::vector<bool>>& avail_nums, std::vector<std::vector<int>>& seens);
+  void restrict_based_on_givens(std::vector<std::vector<bool>>& avail_nums, std::vector<std::vector<int>>& seens);
+  std::vector<bool> make_two_sum(int sum, std::vector<bool> can_use);
 
+  
   // represents the 7x7 playing board
   std::vector<std::vector<int>> board = std::vector<std::vector<int>> (7, std::vector<int> (7, -1));
   // list of available numbers to place
@@ -36,6 +38,11 @@ private:
   std::vector<int> col_sums = std::vector<int> (7, 0);
   std::vector<int> col_count = std::vector<int> (7, 0);
   std::vector<int> col_empty = std::vector<int> (7, 7);
+
+  // numbers that can be placed specific to each row and col
+  std::vector<std::vector<bool>> row_avail_nums = std::vector<std::vector<bool>> (7, std::vector<bool> (8, true));
+  std::vector<std::vector<bool>> col_avail_nums = std::vector<std::vector<bool>> (7, std::vector<bool> (8, true));
+  
   
 };
 
@@ -49,6 +56,52 @@ TwentyFourSeven::TwentyFourSeven(std::vector<std::vector<int>> givens, std::vect
   }
   row_seens = rows;
   col_seens = cols;
+
+  // perform pre-processing, for the purpose of pruning the number of cases to test
+  restrict_based_on_seens(row_avail_nums, row_seens);
+  restrict_based_on_seens(col_avail_nums, col_seens);
+}
+
+// generalizes the procedure of eleiminating which numbers can be placed in each row/col based on the seen constraints
+void TwentyFourSeven::restrict_based_on_seens(std::vector<std::vector<bool>>& avail_nums, std::vector<std::vector<int>>& seens) {
+  for (int i = 0; i < 7; i++) {
+    // 1 is very restricted, remove them where they cannot be placed
+    if ((seens[i][0] < 5 && seens[i][0] > 1) || (seens[i][1] < 5 && seens[i][1] > 1)) {
+      // 1 cannot be in the same row as 2,3 or 4
+      avail_nums[i][1] = false;
+    }
+
+    // if there are 2 seens, find possible ways to make remainder
+    if (seens[i][0] > 0 && seens[i][1] > 0) {
+      int remainder = 20 - seens[i][0] - seens[i][1];
+      avail_nums[i] = make_two_sum(remainder, avail_nums[i]);
+      avail_nums[i][seens[i][0]] = true;
+      avail_nums[i][seens[i][1]] = true;
+    }
+    
+
+  }
+  return;
+}
+
+void TwentyFourSeven::restrict_based_on_givens(std::vector<std::vector<bool>>& avail_nums, std::vector<std::vector<int>>& seens) {
+
+}
+
+std::vector<bool> TwentyFourSeven::make_two_sum(int sum, std::vector<bool> can_use) {
+  std::vector<bool> result(8, false);
+  result[0] = true;
+  for (int i = 1; i < 8; i++) {
+    if (can_use[i]) {
+      for (int j = i; j < 8; j++) {
+        if (can_use[j] && i + j == sum) {
+          result[i] = true;
+          result[j] = true;
+        }
+      }
+    }
+  }
+  return result;
 }
 
 // solve board using a guess and check method with backtracking
@@ -58,7 +111,7 @@ bool TwentyFourSeven::solve() {
       if (board[i][j] == -1) {
         // loop through available numbers
         for (int n = 7; n >= 0; n--) {
-          if (can_place_number(i, j, n)) {
+          if (row_avail_nums[i][n] && col_avail_nums[j][n] && can_place_number(i, j, n)) {
             insert_number(i, j, n);
             if(solve()) {return true;}
             // "backtrack"
@@ -76,7 +129,7 @@ bool TwentyFourSeven::solve() {
 // checks to see if the numbers placed forms one continuous "land mass"
 // this assumes that all 28 numbers have been placed on the board
 bool TwentyFourSeven::is_continuous_land() const {
-  queue<int> to_check;
+  std::queue<int> to_check;
   // find first ind of a number
   for (int j = 0; j < 7; j++) {
     if (board[0][j] > 0) {
@@ -85,7 +138,7 @@ bool TwentyFourSeven::is_continuous_land() const {
     }
   }
   int count = 0;
-  vector<bool> visited(49, false);
+  std::vector<bool> visited(49, false);
   while (!to_check.empty()) {
     int ind = to_check.front();
     to_check.pop();
@@ -168,8 +221,8 @@ bool TwentyFourSeven::can_place_number(const int i, const int j, const int n) {
   // check that inserting a number would not make a 2 x 2 filled square
   board[i][j] = n;
   if (n > 0) {
-    for (int ii = max(i - 1, 0); ii < min(i, 6); ++ii) {
-      for(int jj = max(j - 1, 0); jj < min(j, 6); ++jj) {
+    for (int ii = std::max(i - 1, 0); ii < std::min(i, 6); ++ii) {
+      for(int jj = std::max(j - 1, 0); jj < std::min(j, 6); ++jj) {
         bool test = false;
         test = test || (board[ii][jj] <= 0);
         test = test || (board[ii+1][jj] <= 0);
