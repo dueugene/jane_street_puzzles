@@ -11,10 +11,10 @@ class TwentyFourSeven {
 public:
   TwentyFourSeven();
   TwentyFourSeven(std::vector<std::vector<int>> givens, std::vector<std::vector<int>> rows, std::vector<std::vector<int>> cols);
-  bool solve(int start);
+  bool solve();
   void print();
 
-  bool can_place_number(const int i, const int j, int n);
+  bool can_place_number(const int i, const int j, const int n);
   bool is_continuous_land() const;
   bool is_valid_board() const;
 private:
@@ -43,7 +43,8 @@ TwentyFourSeven::TwentyFourSeven(std::vector<std::vector<int>> givens, std::vect
 
 }
 
-bool TwentyFourSeven::solve(int start = 0) {
+// solve board using a guess and check method with backtracking
+bool TwentyFourSeven::solve() {
   for (int i = 0; i < 7; i++) {
     for (int j = 0; j < 7; j++) {
       if (board[i][j] == -1) {
@@ -65,6 +66,8 @@ bool TwentyFourSeven::solve(int start = 0) {
   return is_continuous_land();
 }
 
+// checks to see if the numbers placed forms one continuous "land mass"
+// this assumes that all 28 numbers have been placed on the board
 bool TwentyFourSeven::is_continuous_land() const {
   queue<int> to_check;
   // find first ind of a number
@@ -91,6 +94,7 @@ bool TwentyFourSeven::is_continuous_land() const {
   return count == 28;
 }
 
+// print out the board to std::cout
 void TwentyFourSeven::print() {
   for (int i = 0; i < 7; i++) {
     for (int j = 0; j < 7; j++) {
@@ -101,7 +105,7 @@ void TwentyFourSeven::print() {
 }
 
 // confirms that the number n can be placed on board at index i,j
-bool TwentyFourSeven::can_place_number(const int i, const int j, int n) {
+bool TwentyFourSeven::can_place_number(const int i, const int j, const int n) {
   if (n < 0 || n > 7) {return false;}
   if (board[i][j] != -1) {return false;}
   

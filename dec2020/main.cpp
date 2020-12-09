@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <vector>
 
 #include "twentyfourseven.cpp"
 
@@ -11,11 +12,14 @@ using mat = vector<vector<A>>;
 
 
 // todo:
-// confirm that a solved state will pass
-// perhaps prune the solve algorithm
-// possible as opposed to validate grid
-// add input method
 // find better way for checking 2x2 and seen constraints so that method is const
+// cleanup validate grid method
+// removing using namespace std in twentyfourseven file
+// add timing would be interesting
+
+// ways to prune the brute force method:
+// consider algorithm where we attempt to place 1 first
+// consider if checking for island will help
 
 int main(int argc, char** argv) {
   // this will allow different input files to be passed
