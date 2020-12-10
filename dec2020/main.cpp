@@ -16,12 +16,11 @@ using mat = vector<vector<A>>;
 // todo:
 // find better way for checking 2x2 and seen constraints so that method is const
 // cleanup validate grid method
-// removing using namespace std in twentyfourseven file
-// add timing would be interesting
 
 // ways to prune the brute force method:
 // consider algorithm where we attempt to place 1 first
 // consider if checking for island will help
+// should consider interaction of placed and seens, to determine what can and cannot be in each row/col
 
 int main(int argc, char** argv) {
   // this will allow different input files to be passed
