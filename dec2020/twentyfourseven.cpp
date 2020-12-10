@@ -10,6 +10,7 @@ public:
   TwentyFourSeven(std::vector<std::vector<int>> givens, std::vector<std::vector<int>> rows, std::vector<std::vector<int>> cols);
   bool solve();
   void print();
+  std::vector<std::vector<int>> get_board();
   
   bool is_valid_board() const;
 private:
@@ -454,6 +455,10 @@ bool TwentyFourSeven::is_valid_board() const {
     }
   }
   return true;
+}
+
+std::vector<std::vector<int>> TwentyFourSeven::get_board() {
+  return board;
 }
 
   
