@@ -15,23 +15,23 @@ public:
   bool is_valid_board() const;
 private:
 
+  bool solve_bruteforce();
   void insert_number(const int i, const int j, const int n);
   bool can_place_number(const int i, const int j, const int n);
   bool is_continuous_land() const;
-  void restrict_based_on_seens(std::vector<bool>& avail_nums_loc, const std::vector<int>& seens);
-  void restrict_based_on_placed(std::vector<bool>& avail_nums_loc, const std::vector<int>& curr);
+  bool restrict_available_nums();
   std::vector<bool> make_two_sum(int sum, std::vector<bool> can_use);
-  void restrict_available_nums();
-  // return contents of row i
-  std::vector<int> row(int i);
-  // return contents of col j
-  std::vector<int> col(int j);
+  std::vector<std::pair<int,int>> make_two_sum(int sum, int can_use);
+  // returns the current board, but columwise
+  std::vector<std::vector<int>> columnwise_board();
+      
   std::vector<int> deduce_required_nums(const std::vector<int>& curr, const std::vector<int>& seens) const;
   
   // represents the 7x7 playing board
   std::vector<std::vector<int>> board = std::vector<std::vector<int>> (7, std::vector<int> (7, -1));
   // list of available numbers to place
   std::vector<int> avail_nums = {21,1,2,3,4,5,6,7};
+  int to_place_count = 28;
   // 7x2 representing first number to be seen in the rows
   std::vector<std::vector<int>> row_seens;
   // 7x2 representing first number to be seen in the cols
@@ -46,22 +46,21 @@ private:
   std::vector<int> col_empty = std::vector<int> (7, 7);
 
   // numbers that can be placed specific to each row and col
-  std::vector<std::vector<bool>> row_avail_nums = std::vector<std::vector<bool>> (7, std::vector<bool> (8, true));
-  std::vector<std::vector<bool>> col_avail_nums = std::vector<std::vector<bool>> (7, std::vector<bool> (8, true));
+  
+  std::vector<unsigned int> row_can_use = std::vector<unsigned int> (7, 255);
+  std::vector<unsigned int> col_can_use = std::vector<unsigned int> (7, 255);
   
   
 };
 
-std::vector<int> TwentyFourSeven::row(int i) {
-  return board[i];
-}
-
-std::vector<int> TwentyFourSeven::col(int j) {
-  std::vector<int> result(7,0);
+std::vector<std::vector<int>> TwentyFourSeven::columnwise_board() {
+  std::vector<std::vector<int>> ans = board;
   for (int i = 0; i < 7; i++) {
-    result[i] = board[i][j];
+    for (int j = 0; j < 7; j++) {
+      ans[i][j] = board[j][i];
+    }
   }
-  return result;
+  return ans;
 }
 
 TwentyFourSeven::TwentyFourSeven(std::vector<std::vector<int>> givens, std::vector<std::vector<int>> rows, std::vector<std::vector<int>> cols) {
@@ -80,47 +79,207 @@ TwentyFourSeven::TwentyFourSeven(std::vector<std::vector<int>> givens, std::vect
   
 }
 
-void TwentyFourSeven::restrict_available_nums() {
+bool TwentyFourSeven::restrict_available_nums() {
   // create a local "snapshot" copy of avail_nums
   std::vector<int> avail_nums_loc = avail_nums;
+  std::vector<unsigned int> row_can_use_loc = row_can_use;
+  std::vector<unsigned int> col_can_use_loc = col_can_use;
+  
   // perform row wise restrictions
   for (int i = 0; i < 7; i++) {
     std::vector<int> known(8, 0);    // counts known numbers, already placed
     std::vector<int> required(8, 0); // counts required numbers, dedcued by logic, whos location is not yet deducable
-    std::vector<int> curr_row = this->row(i);
+    std::vector<int> curr_row = board[i];
     for (int n : curr_row) {
       if (n > 0) {
         known[n]++;
       }
     }
-    // restrict solely based on given constraints
-    restrict_based_on_placed(row_avail_nums[i], curr_row);
-    // restrict solely based on seen constraints
-    restrict_based_on_seens(row_avail_nums[i], row_seens[i]);
-    
+
     // check seen constraints coupled with curr_row
     required = deduce_required_nums(curr_row, row_seens[i]);
-  } 
+    for (int n = 1; n < 8; n++) {
+      avail_nums_loc[n] -= required[n];
+      if (avail_nums_loc[n] < 0) {return false;}
+      if (avail_nums_loc[n] == 0) {
+        // row_can_use_loc[i] &= ~(1 << n);
+      }
+    }
     
+    int count = 0;
+    int sum = 0;
+    for (int n = 1; n < 8; n++) {
+      // combine required with known
+      known[n] += required[n];
+
+      // caluclate count and sum
+      count += known[n];
+      sum += n*known[n];
+    }
+    int remainder = 20 - sum;
+    std::cout << "Row: " << i << ", " << count << ", " << sum << std::endl;
+    
+    switch (count) {
+    case 4:
+      // most restrictive
+      for (int n = 1; n < 8; n++) {
+        if (known[n] == 0) {
+          row_can_use_loc[i] &= ~(1 << n);
+        }
+      }
+      break;
+    case 3:
+      for (int n = 1; n < 8; n++) {
+        if (n != remainder && known[n] == 0) {
+          row_can_use_loc[i] &= ~(1 << n);
+        }
+      }
+      break;
+    case 2:
+      {
+      // make a two sum
+      std::vector<std::pair<int, int>> pairs = make_two_sum(remainder, row_can_use_loc[i]);
+      row_can_use_loc[i] = 1;
+      for (int n = 1; n < 8; n++) {
+        if (known[n] > 0) {
+          row_can_use_loc[i] |= 1 << n;
+        }
+      }
+      for (auto p : pairs) {
+        if (avail_nums_loc[p.first] && avail_nums_loc[p.second]) {
+          row_can_use_loc[i] |= 1 << p.first;
+          row_can_use_loc[i] |= 1 << p.second;
+        }
+      }
+      break;
+      }
+    case 1:
+      if (sum == 1) {
+        // single given of 1
+        row_can_use_loc[i] &= ~(1 << 2);
+        row_can_use_loc[i] &= ~(1 << 3);
+        row_can_use_loc[i] &= ~(1 << 4);
+      } else if (sum == 2) {
+        row_can_use_loc[i] &= ~(1 << 1);
+        row_can_use_loc[i] &= ~(1 << 3);
+      } else if (sum == 3) {
+        // single given of 3
+        row_can_use_loc[i] &= ~(1 << 1);
+        row_can_use_loc[i] &= ~(1 << 2);
+      } else if (sum == 4) {
+        // single given of 4
+        row_can_use_loc[i] &= ~(1 << 1);
+      }
+      break;
+    case 0:
+      break;
+    default:
+      std::cout << "error in preprocessing" << std::endl;
+    }
+    
+  } 
+
+  // reset avail nums
+  avail_nums_loc = avail_nums;
+  auto columnwise = this->columnwise_board();
+  
   // perform col wise restrictions
   for (int i = 0; i < 7; i++) {
     std::vector<int> known(8, 0);    // counts known numbers, already placed
     std::vector<int> required(8, 0); // counts required numbers, dedcued by logic, whos location is not yet deducable
-    std::vector<int> curr_col = this->col(i);
+    std::vector<int> curr_col = columnwise[i];
     for (int n : curr_col) {
       if (n > 0) {
         known[n]++;
       }
     }
-    // restrict solely based on given constraints
-    restrict_based_on_placed(col_avail_nums[i], curr_col);
-    // restrict solely based on seen constraints
-    restrict_based_on_seens(col_avail_nums[i], col_seens[i]);
-    
+
     // check seen constraints coupled with curr_col
     required = deduce_required_nums(curr_col, col_seens[i]);
+    for (int n = 1; n < 8; n++) {
+      avail_nums_loc[n] -= required[n];
+      if (avail_nums_loc[n] < 0) {return false;}
+      if (avail_nums_loc[n] == 0) {
+        // col_can_use_loc[i] &= ~(1 << n);
+      }
+    }
+    
+    int count = 0;
+    int sum = 0;
+    for (int n = 1; n < 8; n++) {
+      // combine required with known
+      known[n] += required[n];
+
+      // caluclate count and sum
+      count += known[n];
+      sum += n*known[n];
+    }
+    int remainder = 20 - sum;
+    std::cout << "Col: " << i << ", " << count << ", " << sum << std::endl;
+    
+    switch (count) {
+    case 4:
+      // most restrictive
+      for (int n = 1; n < 8; n++) {
+        if (known[n] == 0) {
+          col_can_use_loc[i] &= ~(1 << n);
+        }
+      }
+      break;
+    case 3:
+      for (int n = 1; n < 8; n++) {
+        if (n != remainder && known[n] == 0) {
+          col_can_use_loc[i] &= ~(1 << n);
+        }
+      }
+      break;
+    case 2:
+      {
+      // make a two sum
+      std::vector<std::pair<int, int>> pairs = make_two_sum(remainder, col_can_use_loc[i]);
+      col_can_use_loc[i] = 1;
+      for (int n = 1; n < 8; n++) {
+        if (known[n] > 0) {
+          col_can_use_loc[i] |= 1 << n;
+        }
+      }
+      for (auto p : pairs) {
+        if (avail_nums_loc[p.first] && avail_nums_loc[p.second]) {
+          col_can_use_loc[i] |= 1 << p.first;
+          col_can_use_loc[i] |= 1 << p.second;
+        }
+      }
+      break;
+      }
+    case 1:
+      if (sum == 1) {
+        // single given of 1
+        col_can_use_loc[i] &= ~(1 << 2);
+        col_can_use_loc[i] &= ~(1 << 3);
+        col_can_use_loc[i] &= ~(1 << 4);
+      } else if (sum == 2) {
+        col_can_use_loc[i] &= ~(1 << 1);
+        col_can_use_loc[i] &= ~(1 << 3);
+      } else if (sum == 3) {
+        // single given of 3
+        col_can_use_loc[i] &= ~(1 << 1);
+        col_can_use_loc[i] &= ~(1 << 2);
+      } else if (sum == 4) {
+        // single given of 4
+        col_can_use_loc[i] &= ~(1 << 1);
+      }
+      break;
+    case 0:
+      break;
+    default:
+      std::cout << "error in preprocessing" << std::endl;
+    }
+    
   }
-  return;
+  row_can_use = row_can_use_loc;
+  col_can_use = col_can_use_loc;
+  
+  return true;
 }
 
 // generelizes the deduction of required numbers in a given row/col. it considers the interaction of givens, and seen requirements in a given row/col
@@ -152,114 +311,21 @@ std::vector<int> TwentyFourSeven::deduce_required_nums(const std::vector<int>& c
     return required;
 }
 
-// generalizes the procedure of eleiminating which numbers can be placed in each row/col based on the seen constraints
-void TwentyFourSeven::restrict_based_on_seens(std::vector<bool>& avail_nums_loc, const std::vector<int>& seens) {
-  // 1 is very restricting, remove them where they cannot be placed
-  if ((seens[0] < 5 && seens[0] > 1) || (seens[1] < 5 && seens[1] > 1)) {
-    // 1 cannot be in the same row as 2,3 or 4
-    avail_nums_loc[1] = false;
-  }
-  if (seens[0] == 1 || seens[1] == 1) {
-    // if 1 is a seen constraint, remove other nums
-    avail_nums_loc[2] = false;
-    avail_nums_loc[3] = false;
-    avail_nums_loc[4] = false;
-  }
-
-  // if there is one seen
-  if (seens[0] > 0 || seens[1] > 0) {
-    int sum = seens[0] + seens[1];
-    if (sum == 1) {
-      // single seen constrain of 1
-      avail_nums_loc[2] = false;
-      avail_nums_loc[3] = false;
-      avail_nums_loc[4] = false;
-    } else if (sum == 3) {
-      // single seen contraint 3
-      avail_nums_loc[1] = false;
-      avail_nums_loc[2] = false;
-        
-    } else if (sum == 4) {
-      avail_nums_loc[1] = false;
-    }
-
-  }
-
-  // if there are 2 seens, find possible ways to make remainder
-  if (seens[0] > 0 && seens[1] > 0) {
-    int remainder = 20 - seens[0] - seens[1];
-    avail_nums_loc = make_two_sum(remainder, avail_nums_loc);
-    // put original seens back into avail_nums_loc
-    avail_nums_loc[seens[0]] = true;
-    avail_nums_loc[seens[1]] = true;
-  }
-  return;
-}
-
-// eliminates numbers can be placed in each row/col based on the interaction of whats placed on the board, and the seens
-void TwentyFourSeven::restrict_based_on_placed(std::vector<bool>& avail_nums_loc, const std::vector<int>& curr) {
-  for (int n = 1; n < 8; n++) {
-    if (avail_nums[n] == 0) {
-      avail_nums_loc[n] = false;
-    }
-  }
-  int sums = 0;
-  int counts = 0;
-  for (int n : curr) {
-    if (n > 0) {
-      sums += n;
-      counts++;
-    }
-  }
-
-  // if there are 2 numbers in the row/col already, check the possible ways to make remainder
-  if (counts == 2) {
-    int remainder = 20 - sums;
-    avail_nums_loc = make_two_sum(remainder, avail_nums_loc);
-  }
-  // if there is just one number
-  if (counts == 1) {
-    if (sums == 1) {
-      // single given of 1
-      avail_nums_loc[2] = false;
-      avail_nums_loc[3] = false;
-      avail_nums_loc[4] = false;
-    } else if (sums == 3) {
-      // single given of 3
-      avail_nums_loc[1] = false;
-      avail_nums_loc[2] = false;
-    } else if (sums == 4) {
-      // single given of 4
-      avail_nums_loc[1] = false;
-    }
-  }
-  return;
-}
-
-std::vector<bool> TwentyFourSeven::make_two_sum(int sum, std::vector<bool> can_use) {
-  std::vector<bool> result(8, false);
-  result[0] = true;
-  for (int i = 1; i < 8; i++) {
-    if (can_use[i]) {
-      for (int j = i; j < 8; j++) {
-        if (can_use[j] && i + j == sum) {
-          result[i] = true;
-          result[j] = true;
-        }
-      }
-    }
-  }
-  return result;
+bool TwentyFourSeven::solve() {
+  
+  
+  // last resort, use the bruteforce solver
+  return solve_bruteforce();
 }
 
 // solve board using a guess and check method with backtracking
-bool TwentyFourSeven::solve() {
+bool TwentyFourSeven::solve_bruteforce() {
   for (int i = 0; i < 7; i++) {
     for (int j = 0; j < 7; j++) {
       if (board[i][j] == -1) {
         // loop through available numbers
         for (int n = 7; n >= 0; n--) {
-          if (row_avail_nums[i][n] && col_avail_nums[j][n] && can_place_number(i, j, n)) {
+          if (((row_can_use[i] >> n) & 1) && ((col_can_use[j] >> n) & 1) && can_place_number(i, j, n)) {
             insert_number(i, j, n);
             if(solve()) {return true;}
             // "backtrack"
@@ -326,6 +392,7 @@ void TwentyFourSeven::insert_number(const int i, const int j, const int n) {
     if (prev > 0) {
       row_count[i]--;
       col_count[j]--;
+      to_place_count++;
     }
   }
   
@@ -341,6 +408,7 @@ void TwentyFourSeven::insert_number(const int i, const int j, const int n) {
     if (n > 0) {
       row_count[i]++;
       col_empty[j]--;
+      to_place_count--;
     }
   }
   
@@ -528,4 +596,17 @@ std::vector<std::vector<int>> TwentyFourSeven::get_board() {
   return board;
 }
 
+std::vector<std::pair<int, int>> TwentyFourSeven::make_two_sum(int sum, int can_use) {
+  std::vector<std::pair<int, int>> ans;
+  for (int i = 1; i < 8; i++) {
+    if ((can_use >> i) & 1) {
+      for (int j = i; j < 8; j++) {
+        if (((can_use >> j) & 1) && (i + j == sum)) {
+          ans.push_back({i, j});
+        }
+      }
+    }
+  }
+  return ans;
+}
   
