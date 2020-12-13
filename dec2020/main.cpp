@@ -12,18 +12,6 @@ using Clock = std::chrono::high_resolution_clock;
 template <typename A>
 using mat = vector<vector<A>>;
 
-
-// todo:
-// find better way for checking 2x2 and seen constraints so that method is const
-// cleanup validate grid method
-
-// ways to prune the brute force method:
-// consider algorithm where we attempt to place 1 first
-// consider if checking for island will help
-// should consider interaction of placed and seens, to determine what can and cannot be in each row/col
-// consider ranking indices from most constrained to least constrained in the solve section.
-
-
 TwentyFourSeven parse_input_file(string filename);
   
 int main(int argc, char** argv) {
