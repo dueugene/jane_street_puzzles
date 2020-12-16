@@ -33,7 +33,7 @@ The level 2 constraints was introduced to attempt to improve the time to arrive 
 
 For example if we look at row 1 (0 indexed) in puzzle1, the presence of the seen constraints 7 and 4, and the given of 6, implies that the remaining number is 3 in this row. Furthermore, there are only allowed 3 3's on the board, by deducing that 3 is required in row 0, we restrict the availability of 3's on the rest of the board. 
 
-By performing this level 2 check, the solver is now able to solve puzzle4 within 4s.
+By performing this level 2 check, the solver is able to terminate possible solution branches earlier, and can now solve all the current puzzles within seconds.
 
 ## example input file
 The input file for puzzle1 is as follows:
