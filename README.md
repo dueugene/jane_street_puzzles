@@ -14,4 +14,5 @@ Description of scripts:
 * may2020: a solver for a number sequence problem
 * aug2020: a script to parse a list of stock market ticker symbols, and find the missing symbol
 * dec2020: a solver for the month's logic puzzle, uses a brute force method combined with backtracking
+* jan2021: script **incomplete**
 
