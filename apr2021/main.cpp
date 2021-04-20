@@ -7,36 +7,39 @@
 using namespace std;
 using Clock = std::chrono::high_resolution_clock;
 
-double probabilityOfTeamWinning(const vector<int>& seed, const int team);
 ostream& operator<<(ostream& os, const vector<int>& vec);
+double probabilityOfTeamWinning(const vector<int>& seed, const int team);
 
 int main(int argc, char** argv) {
 
-  vector<int> seed = {1, 16, 8, 9, 5, 12, 4, 13, 6, 11, 3, 14, 7, 10, 2, 15};
-  // vector<int> seed = {1, 3, 4, 2};
-  // vector<int> small_seed = {2, 1};
-  // vector<int> small_seed = {1};
-  int n = seed.size();
+  vector<int> curr_bracket = {1, 16, 8, 9, 5, 12, 4, 13, 6, 11, 3, 14, 7, 10, 2, 15};
+  // vector<int> curr_bracket = {1, 3, 4, 2};
+  // vector<int> curr_bracket = {2, 1};
+  // vector<int> curr_bracket = {1};
+  cout.precision(12);
+  int n = curr_bracket.size();
   double best_prob = 0.0;
-  vector<int> bracket = seed;
+  vector<int> best_bracket = curr_bracket;
   auto t1 = Clock::now();
   for (int i = 0; i < n; i++) {
     for (int j = i + 1; j < n; j++) {
-      swap(seed[i], seed[j]);
-      double ans = probabilityOfTeamWinning(seed, 2);
-      cout << "bracket: " << seed;
-      cout << "Probability of " << 2 << " winning: " << ans << endl;
-      if (ans > best_prob) {
-        best_prob = ans;
-        bracket = seed;
+      swap(curr_bracket[i], curr_bracket[j]);
+      double curr_prob = probabilityOfTeamWinning(curr_bracket, 2);
+
+      cout << "bracket: " << curr_bracket;
+      cout << "Probability of " << 2 << " winning: " << curr_prob << endl;
+      
+      if (curr_prob > best_prob) {
+        best_prob = curr_prob;
+        best_bracket = curr_bracket;
       }
-      swap(seed[i], seed[j]);
+      swap(curr_bracket[i], curr_bracket[j]);
     }
   }
   auto t2 = Clock::now();
-  chrono::duration<double> elapsed_s = t2 - t1;
-  cout << "Elapsed time: " << elapsed_s.count() << "s" << endl;
-  cout << "best: " << bracket;
+  chrono::duration<double> elapsed_time = t2 - t1;
+  cout << "Elapsed time: " << elapsed_time.count() << "s" << endl;
+  cout << "best: " << best_bracket;
   cout << "Probability of " << 2 << " winning: " << best_prob << endl;
   
   
@@ -52,26 +55,26 @@ ostream& operator<<(ostream& os, const vector<int>& vec)
   return os;
 }
 
-double probabilityOfTeamWinning(const vector<int>& seed, const int team) {
+double probabilityOfTeamWinning(const vector<int>& bracket, const int team) {
   // for tournament bracket we require number of teams to be power of 2
-  int n = seed.size();
+  int n = bracket.size();
   assert((n & n - 1) == 0);
 
   vector<unordered_map<int, double>> probabilities(n);
   for (int i = 0; i < n; i++) {
-    probabilities[i].insert({seed[i], 1.0});
+    probabilities[i].insert({bracket[i], 1.0});
   }
 
   while (n > 0) {
     n = n / 2;
     for (int i  = 0; i < n; i++) {
-      auto teams_left = probabilities[i*2];
-      auto teams_right = probabilities[i*2 + 1];
+      unordered_map<int, double> teams_left = probabilities[i*2];
+      unordered_map<int, double> teams_right = probabilities[i*2 + 1];
       unordered_map<int, double> curr;
       
-      for (auto a : teams_left) {
+      for (const auto& a : teams_left) {
         double prob_a = 0.0;
-        for (auto b : teams_right) {
+        for (const auto& b : teams_right) {
           prob_a += b.second * ((double)b.first / (double)(a.first + b.first));
         }
         curr[a.first] = prob_a * a.second;
