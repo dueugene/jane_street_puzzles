@@ -72,9 +72,9 @@ double probabilityOfTeamWinning(const vector<int>& bracket, const int team) {
       unordered_map<int, double> teams_right = probabilities[i*2 + 1];
       unordered_map<int, double> curr;
       
-      for (const auto& a : teams_left) {
+      for (auto a : teams_left) {
         double prob_a = 0.0;
-        for (const auto& b : teams_right) {
+        for (auto b : teams_right) {
           prob_a += b.second * ((double)b.first / (double)(a.first + b.first));
         }
         curr[a.first] = prob_a * a.second;
